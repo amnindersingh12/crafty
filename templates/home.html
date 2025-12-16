@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Hero Section -->
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-background">
+        <div class="hero-art-mesh"></div>
+        <div class="hero-overlay-grain"></div>
+    </div>
+    <div class="hero-content">
+        <h1 class="hero-title reveal-on-scroll">Welcome to Getting Crafty</h1>
+        <p class="hero-subtitle reveal-on-scroll stagger-1">Handmade with love, crafted for you</p>
+        <a href="{% url 'core:shop' %}" class="hero-cta reveal-on-scroll stagger-2">Shop Now</a>
+    </div>
+</section>
+
+<!-- Featured Products Section -->
+{% if featured_products %}
+<section class="featured-section">
+    <div class="container">
+        <h2 class="section-title reveal-on-scroll">Featured Creations</h2>
+        <div class="product-grid">
+            {% for product in featured_products %}
+            <div class="product-card reveal-on-scroll stagger-{{ forloop.counter }}">
+                <a href="{% url 'core:product_detail' product.slug %}">
+                    {% if product.video %}
+                    <div class="product-image">
+                        <video src="{{ product.video.url }}" autoplay muted loop playsinline></video>
+                    </div>
+                    {% elif product.image %}
+                    <div class="product-image">
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                    </div>
+                    {% else %}
+                    <div class="product-image product-image-placeholder">
+                        <span>{{ product.name|slice:":1" }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="product-info">
+                        <h3 class="product-name">{{ product.name }}</h3>
+                        <p class="product-price">${{ product.price }}</p>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- About Section -->
+<section class="about-section">
+    <div class="container">
+        <div class="about-content reveal-on-scroll">
+            <h2>About </h2>
+            <p>Creating handmade crafts with passion and creativity. Every piece tells a story.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

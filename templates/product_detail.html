@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} — Getting Crafty{% endblock %}
+
+{% block content %}
+<section class="product-detail">
+    <div class="container">
+        <div class="product-detail-grid">
+            <div class="product-gallery reveal-on-scroll">
+                {% if product.video %}
+                <div class="product-main-image">
+                    <video src="{{ product.video.url }}" autoplay muted loop playsinline controls></video>
+                </div>
+                {% elif product.image %}
+                <div class="product-main-image">
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" id="main-image">
+                </div>
+                {% else %}
+                <div class="product-main-image product-image-placeholder">
+                    <span>{{ product.name|slice:":1" }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="product-details">
+                <span class="product-category reveal-on-scroll stagger-1">{{ product.category.name }}</span>
+                <h1 class="product-title reveal-on-scroll stagger-1">{{ product.name }}</h1>
+                <p class="product-price reveal-on-scroll stagger-2">${{ product.price }}</p>
+
+                <div class="product-description reveal-on-scroll stagger-2">
+                    {{ product.description|linebreaks }}
+                </div>
+
+                <div class="product-actions reveal-on-scroll stagger-3">
+                    <div class="quantity-selector">
+                        <button class="qty-btn" id="qty-minus">−</button>
+                        <input type="number" id="quantity" value="1" min="1" max="99">
+                        <button class="qty-btn" id="qty-plus">+</button>
+                    </div>
+                    <button class="add-to-cart-btn primary" id="add-to-cart" data-product-id="{{ product.id }}">
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <a href="{% url 'core:shop' %}" class="back-link reveal-on-scroll stagger-4">← Back to Shop</a>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const qtyInput = document.getElementById('quantity');
+    const minusBtn = document.getElementById('qty-minus');
+    const plusBtn = document.getElementById('qty-plus');
+    const addBtn = document.getElementById('add-to-cart');
+
+    minusBtn.addEventListener('click', () => {
+        const val = parseInt(qtyInput.value);
+        if (val > 1) qtyInput.value = val - 1;
+    });
+
+    plusBtn.addEventListener('click', () => {
+        const val = parseInt(qtyInput.value);
+        if (val < 99) qtyInput.value = val + 1;
+    });
+
+    addBtn.addEventListener('click', async () => {
+        const productId = addBtn.dataset.productId;
+        const quantity = parseInt(qtyInput.value);
+
+        try {
+            const response = await fetch('{% url "core:add_to_cart" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ product_id: productId, quantity: quantity })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('cart-count').textContent = data.cart_count;
+                addBtn.textContent = 'Added to Cart!';
+                setTimeout(() => addBtn.textContent = 'Add to Cart', 2000);
+            }
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+        }
+    });
+
+    // Image zoom on hover
+    const mainImage = document.getElementById('main-image');
+    if (mainImage) {
+        mainImage.addEventListener('mousemove', (e) => {
+            const rect = mainImage.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            mainImage.style.transformOrigin = `${x}% ${y}%`;
+        });
+
+        mainImage.addEventListener('mouseenter', () => {
+            mainImage.style.transform = 'scale(1.5)';
+        });
+
+        mainImage.addEventListener('mouseleave', () => {
+            mainImage.style.transform = 'scale(1)';
+            mainImage.style.transformOrigin = 'center center';
+        });
+    }
+</script>
+{% endblock %}

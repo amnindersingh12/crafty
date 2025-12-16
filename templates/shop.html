@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Shop — Getting Crafty{% endblock %}
+
+{% block content %}
+<!-- Marquee Section -->
+<section class="marquee-section-svg">
+    <div class="marquee-svg-wrapper">
+        <svg class="marquee-svg" style="height: 150px; overflow: visible;">
+            <path id="marquee-curve" fill="none" stroke="transparent"
+                d="M-550,59.580000000000005 L-550,59.580000000000005 S-183.15,119.58000000000001 0,119.58000000000001 S366.85,59.580000000000005 550,59.580000000000005 S916.85,119.58000000000001 1100,119.58000000000001 S1466.85,59.580000000000005 1650,59.580000000000005 S2016.85,119.58000000000001 2200,119.58000000000001 S2566.85,59.580000000000005 2750,59.580000000000005 S3116.85,119.58000000000001 3300,119.58000000000001 S3666.85,59.580000000000005 3850,59.580000000000005">
+            </path>
+
+            <text class="marquee-text">
+                <textPath id="marquee-text-path" href="#marquee-curve" startOffset="-707">
+                    <tspan class="Marquee-svg-text" x="0">diy projects ⋆ let's get crafty ⋆</tspan>
+                    <tspan class="Marquee-svg-text" x="760">diy projects ⋆ let's get crafty ⋆</tspan>
+                    <tspan class="Marquee-svg-text" x="1520">diy projects ⋆ let's get crafty ⋆</tspan>
+                    <tspan class="Marquee-svg-text" x="2280">diy projects ⋆ let's get crafty ⋆</tspan>
+                    <tspan class="Marquee-svg-text" x="3040">diy projects ⋆ let's get crafty ⋆</tspan>
+                    <tspan class="Marquee-svg-text" x="3800">diy projects ⋆ let's get crafty ⋆</tspan>
+                    <tspan class="Marquee-svg-text" x="4560">diy projects ⋆ let's get crafty ⋆</tspan>
+                </textPath>
+            </text>
+        </svg>
+    </div>
+</section>
+<!-- Shop Page Section -->
+<section class="shop-page">
+    <div class="container">
+        <!-- Shop Header with Title and Category Filter -->
+        <header class="shop-header reveal-on-scroll">
+            <h1 class="page-title">
+                {% if selected_category %}
+                {{ selected_category.name|title }}
+                {% else %}
+                Shop
+                {% endif %}
+            </h1>
+
+            {% if categories %}
+            <div class="category-filter">
+                <a href="{% url 'core:shop' %}" class="filter-btn {% if not current_category %}active{% endif %}">
+                    all
+                </a>
+                {% for category in categories %}
+                <a href="?category={{ category.slug }}"
+                    class="filter-btn {% if current_category == category.slug %}active{% endif %}">
+                    {{ category.name|lower }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </header>
+
+        <!-- Product Grid -->
+        <div class="product-grid">
+            {% for product in products %}
+            <article class="product-card reveal-on-scroll stagger-{{ forloop.counter|add:1 }}"
+                data-product-id="{{ product.id }}">
+                <a href="{% url 'core:product_detail' product.slug %}" class="product-link">
+                    <!-- Product Image/Video -->
+                    <div class="product-image-wrapper">
+                        {% if product.video %}
+                        <div class="product-image">
+                            <video src="{{ product.video.url }}" autoplay muted loop playsinline
+                                class="product-media"></video>
+                        </div>
+                        {% elif product.image %}
+                        <div class="product-image">
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy"
+                                class="product-media" />
+                        </div>
+                        {% else %}
+                        <div class="product-image product-image-placeholder">
+                            <span class="placeholder-initial">{{ product.name|slice:":1"|upper }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Product Info -->
+                    <div class="product-info">
+                        <span class="product-category">{{ product.category.name }}</span>
+                        <h3 class="product-name">{{ product.name }}</h3>
+                        <p class="product-price">${{ product.price }}</p>
+                    </div>
+                </a>
+
+                <!-- Add to Cart Button -->
+                <button class="add-to-cart-btn" data-product-id="{{ product.id }}"
+                    aria-label="Add {{ product.name }} to cart">
+                    <span class="btn-text">Add to Cart</span>
+                    <span class="btn-success" style="display: none;">Added!</span>
+                </button>
+            </article>
+            {% empty %}
+            <div class="empty-state">
+                <p>No products found in this category.</p>
+                <a href="{% url 'core:shop' %}" class="hero-cta">View All Products</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add to Cart Functionality
+    document.addEventListener('DOMContentLoaded', function () {
+        const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+
+        addToCartButtons.forEach(btn => {
+            btn.addEventListener('click', async function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const productId = this.dataset.productId;
+                const btnText = this.querySelector('.btn-text');
+                const btnSuccess = this.querySelector('.btn-success');
+
+                // Disable button during request
+                this.disabled = true;
+                this.style.opacity = '0.6';
+
+                try {
+                    const response = await fetch('{% url "core:add_to_cart" %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({
+                            product_id: productId,
+                            quantity: 1
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Update cart count in header
+                        const cartCount = document.getElementById('cart-count');
+                        if (cartCount) {
+                            cartCount.textContent = data.cart_count;
+
+                            // Animate cart icon
+                            cartCount.parentElement.style.transform = 'scale(1.2)';
+                            setTimeout(() => {
+                                cartCount.parentElement.style.transform = 'scale(1)';
+                            }, 300);
+                        }
+
+                        // Show success state
+                        btnText.style.display = 'none';
+                        btnSuccess.style.display = 'inline';
+                        this.classList.add('success');
+
+                        // Reset button after 2 seconds
+                        setTimeout(() => {
+                            btnText.style.display = 'inline';
+                            btnSuccess.style.display = 'none';
+                            this.classList.remove('success');
+                            this.disabled = false;
+                            this.style.opacity = '1';
+                        }, 2000);
+                    } else {
+                        throw new Error('Failed to add to cart');
+                    }
+                } catch (error) {
+                    console.error('Error adding to cart:', error);
+                    alert('Sorry, there was an error adding this item to your cart. Please try again.');
+                    this.disabled = false;
+                    this.style.opacity = '1';
+                }
+            });
+        });
+
+        // Prevent card click when clicking add to cart
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('click', function (e) {
+                if (e.target.closest('.add-to-cart-btn')) {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
